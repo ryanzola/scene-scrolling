@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import Experience from './Experience.js'
+import Canvas from './Canvas.js'
 
 export default class World
 {
@@ -14,7 +15,8 @@ export default class World
         {
             if(_group.name === 'base')
             {
-                this.setDummy()
+                // this.setDummy()
+                this.setCanvas()
             }
         })
     }
@@ -28,6 +30,10 @@ export default class World
             new THREE.MeshBasicMaterial({ map: this.resources.items.lennaTexture })
         )
         this.scene.add(cube)        
+    }
+
+    setCanvas() {
+        this.canvas = new Canvas();
     }
 
     resize()
