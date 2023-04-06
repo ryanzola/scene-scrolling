@@ -1,0 +1,19 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore local development files and directories
+.cache/
+dist/
+*.log
+.DS_Store
+
+# Ignore environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Ignore Git history
+.git/
+.gitignore
+
