@@ -1,5 +1,5 @@
 # Use the official Node.js image as the base image
-FROM node:14
+FROM ryanzola/template-complex:latest
 
 # Set the working directory in the container
 WORKDIR /app
@@ -18,4 +18,3 @@ EXPOSE 3000
 
 # Start the Vite development server
 CMD ["npm", "run", "dev"]
-

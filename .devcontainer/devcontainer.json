@@ -1,0 +1,19 @@
+{
+  "name": "Template Complex",
+  "dockerFile": "Dockerfile",
+  "appPort": 3000,
+  "runArgs": ["-u", "node"],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "workbench.colorTheme": "poimandres",
+        "terminal.integrated.shell.lunix": "/bin/bash"
+      },
+      "extensions": [
+        "poimandres.poimandres",
+        "slevesque.shader"
+      ]
+    }
+  },
+  "postCreateCommand": "npm install",
+}
