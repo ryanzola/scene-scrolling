@@ -97,28 +97,13 @@ export default class Experience {
     }
   }
 
-  createScene({ color = 'blue'}) {
-    const scenes = {
-      red: {
-        bg: bg_red,
-        matcap: red
-      },
-      green: {
-        bg: bg_green,
-        matcap: green
-      },
-      blue: {
-        bg: bg_blue,
-        matcap: blue
-      }
-    }
-
+  createScene({ color = 1 }) {
 
     let scene = new THREE.Scene()
-    scene.background = new THREE.TextureLoader().load(scenes[color].bg)
+    scene.background = new THREE.TextureLoader().load(this.scenes[color].bg)
 
     let material = new THREE.MeshMatcapMaterial({ 
-      matcap: new THREE.TextureLoader().load(scenes[color].matcap)
+      matcap: new THREE.TextureLoader().load(this.scenes[color].matcap)
     })
     let geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2)
     let mesh = new THREE.Mesh(geometry, material)
@@ -136,7 +121,7 @@ export default class Experience {
   }
 
   setScene() {
-    this.scene = this.createScene({ color: 'green'});
+    this.scene = this.createScene({ color: 0 });
   }
 
   setCamera() {

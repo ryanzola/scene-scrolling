@@ -9,6 +9,7 @@ export default class Canvas {
     this.experience = new Experience();
     this.scene = this.experience.scene;
     this.config = this.experience.config;
+    this.resources = this.experience.resources;
 
     this.setGeometry();
     this.setMaterial();
