@@ -11,8 +11,8 @@ import Camera from "./Camera.js";
 
 import assets from "./assets.js";
 
-import { Lethargy } from "lethargy";
-import { WheelGesture } from '@use-gesture/vanilla' 
+// import { Lethargy } from "lethargy";
+// import { WheelGesture } from '@use-gesture/vanilla' 
 
 export default class Experience {
   static instance;
@@ -42,10 +42,10 @@ export default class Experience {
     this.setResources();
     this.setWorld();
 
-    this.lethargy = new Lethargy();
-    this.gesture = new WheelGesture(document.body, (state) => { 
-      console.log(this.lethargy.check(state.event)) 
-    })
+    // this.lethargy = new Lethargy();
+    // this.gesture = new WheelGesture(document.body, (state) => { 
+    //   console.log(this.lethargy.check(state.event)) 
+    // })
 
     this.sizes.on("resize", () => {
       this.resize();

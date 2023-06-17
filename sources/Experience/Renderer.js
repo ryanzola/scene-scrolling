@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import Experience from './Experience.js'
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+
+import VirtualScroll from 'virtual-scroll'
 
 import red from "../../public/assets/matcap-red.jpg";
 import green from "../../public/assets/matcap-green.jpg";
@@ -34,12 +34,12 @@ export default class Renderer {
       {
         bg: bg_green,
         matcap: green,
-        geometry: new THREE.BoxGeometry(0.1, 0.1, 0.1)
+        geometry: new THREE.TorusGeometry(0.1, 0.01, 16, 100)
       }, 
       {
         bg: bg_blue,
         matcap: blue,
-        geometry: new THREE.BoxGeometry(0.1, 0.1, 0.1)
+        geometry: new THREE.SphereGeometry(0.05, 32, 32)
       }
     ]
 
@@ -57,6 +57,12 @@ export default class Renderer {
 		)
 
 		this.current = 0;
+		this.currentState = 0;
+		this.scroller = new VirtualScroll();
+		this.scroller.on(e => {
+			this.currentState -= e.deltaY / 10000;
+			this.currentState = (this.currentState + 3000) % 3;
+		})
 
 
 		// Debug
@@ -67,7 +73,6 @@ export default class Renderer {
 
 
 		this.setInstance()
-
 		this.initPost();
 
     this.scenes.forEach((o, index) => {
@@ -180,7 +185,8 @@ export default class Renderer {
 			uniforms: {
 				uTexture1: { value: new THREE.TextureLoader().load(bg_red) },
 				uTexture2: { value: new THREE.TextureLoader().load(bg_green) },
-				progress: { value: 0 }
+				progress: { value: 0 },
+				time: { value: 0 },
 			},
 			vertexShader: vertex,
 			fragmentShader: fragment,
@@ -222,9 +228,14 @@ export default class Renderer {
 
 		if (!this.material) return
 
+		this.current = Math.floor(this.currentState)
+		this.next = Math.floor((this.current + 1) % this.scenes.length)
+		this.progress = this.currentState % 1
+
+		console.log(this.current, this.next, this.progress)
+
 		this.instance.setRenderTarget(this.scenes[this.current].target)
 		this.instance.render(this.scenes[this.current].scene, this.camera)
-		this.next = (this.current + 1) % this.scenes.length
 
 		this.instance.setRenderTarget(this.scenes[this.next].target)
 		this.instance.render(this.scenes[this.next].scene, this.camera)
@@ -233,6 +244,8 @@ export default class Renderer {
 
 		this.material.uniforms.uTexture1.value = this.scenes[this.current].target.texture;
 		this.material.uniforms.uTexture2.value = this.scenes[this.next].target.texture;
+		this.material.uniforms.progress.value = this.progress;
+		this.material.uniforms.time.value = this.time.elapsed * 0.005;
 
 		// update scenes
 		this.scenes.forEach((o, index) => {
