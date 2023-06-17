@@ -3,180 +3,256 @@ import Experience from './Experience.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 
-export default class Renderer
-{
-    constructor(_options = {})
-    {
-        this.experience = new Experience()
-        this.config = this.experience.config
-        this.debug = this.experience.debug
-        this.stats = this.experience.stats
-        this.time = this.experience.time
-        this.sizes = this.experience.sizes
-        this.scene = this.experience.scene
-        this.camera = this.experience.camera
+import red from "../../public/assets/matcap-red.jpg";
+import green from "../../public/assets/matcap-green.jpg";
+import blue from "../../public/assets/matcap-blue.jpg";
 
-        // Debug
-        if(this.debug)
-        {
-            this.debugFolder = this.debug.addFolder('renderer')
-        }
-        
-        this.usePostprocess = false
+import bg_red from "../../public/assets/bg-red.jpg";
+import bg_green from "../../public/assets/bg-green.jpg";
+import bg_blue from "../../public/assets/bg-blue.jpg";
 
-        this.setInstance()
-        this.setPostProcess()
+import vertex from "./Shader/canvas/vertex.glsl";
+import fragment from "./Shader/canvas/fragment.glsl";
+
+export default class Renderer {
+	constructor(_options = {}) {
+		this.experience = new Experience()
+		this.config = this.experience.config
+		this.debug = this.experience.debug
+		this.stats = this.experience.stats
+		this.time = this.experience.time
+		this.sizes = this.experience.sizes
+		this.scene = this.experience.scene
+		this.camera = this.experience.camera.instance
+
+    this.scenes = [
+      {
+        bg: bg_red,
+        matcap: red,
+        geometry: new THREE.BoxGeometry(0.1, 0.1, 0.1)
+      }, 
+      {
+        bg: bg_green,
+        matcap: green,
+        geometry: new THREE.BoxGeometry(0.1, 0.1, 0.1)
+      }, 
+      {
+        bg: bg_blue,
+        matcap: blue,
+        geometry: new THREE.BoxGeometry(0.1, 0.1, 0.1)
+      }
+    ]
+
+		this.postScene = new THREE.Scene()
+
+		let fustumSize = 1
+		let aspect = 1
+		this.postCamera = new THREE.OrthographicCamera(
+			fustumSize * aspect / -2,
+			fustumSize * aspect / 2,
+			fustumSize / 2,
+			fustumSize / -2,
+			-1000,
+			1000
+		)
+
+		this.current = 0;
+
+
+		// Debug
+		if (this.debug) {
+			this.debugFolder = this.debug.addFolder('renderer')
+		}
+
+
+
+		this.setInstance()
+
+		this.initPost();
+
+    this.scenes.forEach((o, index) => {
+      o.scene = this.createScene(o.bg, o.matcap, o.geometry)
+      this.instance.compile(o.scene, this.camera)
+      o.target = new THREE.WebGLRenderTarget(this.config.width, this.config.height)
+    })
+	}
+
+	setInstance() {
+		this.clearColor = '#010101'
+
+		// Renderer
+		this.instance = new THREE.WebGLRenderer({
+			alpha: false,
+			antialias: true
+		})
+		this.instance.domElement.style.position = 'absolute'
+		this.instance.domElement.style.top = 0
+		this.instance.domElement.style.left = 0
+		this.instance.domElement.style.width = '100%'
+		this.instance.domElement.style.height = '100%'
+
+		// this.instance.setClearColor(this.clearColor, 0)
+		this.instance.setSize(this.config.width, this.config.height)
+		this.instance.setPixelRatio(this.config.pixelRatio)
+
+		this.instance.physicallyCorrectLights = true
+		// this.instance.gammaOutPut = true
+		this.instance.outputColorSpace = THREE.SRGBColorSpace
+		// this.instance.shadowMap.type = THREE.PCFSoftShadowMap
+		// this.instance.shadowMap.enabled = false
+		this.instance.toneMapping = THREE.NoToneMapping
+		this.instance.toneMappingExposure = 1
+
+		this.context = this.instance.getContext()
+
+		// Add stats panel
+		if (this.stats) {
+			this.stats.setRenderPanel(this.context)
+		}
+
+		// Debug
+		if (this.debug) {
+			this.debugFolder
+				.addColor(
+					this,
+					'clearColor'
+				)
+				.onChange(() => {
+					this.instance.setClearColor(this.clearColor)
+				})
+
+			this.debugFolder
+				.add(
+					this.instance,
+					'toneMapping',
+					{
+						'NoToneMapping': THREE.NoToneMapping,
+						'LinearToneMapping': THREE.LinearToneMapping,
+						'ReinhardToneMapping': THREE.ReinhardToneMapping,
+						'CineonToneMapping': THREE.CineonToneMapping,
+						'ACESFilmicToneMapping': THREE.ACESFilmicToneMapping
+					}
+				)
+				.onChange(() => {
+					this.scene.traverse((_child) => {
+						if (_child instanceof THREE.Mesh)
+							_child.material.needsUpdate = true
+					})
+				})
+
+			this.debugFolder
+				.add(
+					this.instance,
+					'toneMappingExposure'
+				)
+				.min(0)
+				.max(10)
+		}
+	}
+
+  createScene(background, matcap, geometry) {
+    let scene = new THREE.Scene()
+
+		let bgTexture = new THREE.TextureLoader().load(background)
+    scene.background = bgTexture;
+
+    let material = new THREE.MeshMatcapMaterial({ 
+      matcap: new THREE.TextureLoader().load(matcap),
+    })
+
+    let mesh = new THREE.Mesh(geometry, material)
+
+    for(let i = 0; i < 300; i++) {
+      let random = new THREE.Vector3().randomDirection()
+      let clone = mesh.clone()
+      clone.position.copy(random.multiplyScalar(1))
+      clone.rotation.x = Math.random() * Math.PI * 2
+      clone.rotation.y = Math.random() * Math.PI * 2
+      scene.add(clone)
     }
 
-    setInstance()
-    {
-        this.clearColor = '#010101'
+    return scene
+  }
 
-        // Renderer
-        this.instance = new THREE.WebGLRenderer({
-            alpha: false,
-            antialias: true
-        })
-        this.instance.domElement.style.position = 'absolute'
-        this.instance.domElement.style.top = 0
-        this.instance.domElement.style.left = 0
-        this.instance.domElement.style.width = '100%'
-        this.instance.domElement.style.height = '100%'
+	initPost() {
+		this.material = new THREE.ShaderMaterial({
+			side: THREE.DoubleSide,
+			uniforms: {
+				uTexture1: { value: new THREE.TextureLoader().load(bg_red) },
+				uTexture2: { value: new THREE.TextureLoader().load(bg_green) },
+				progress: { value: 0 }
+			},
+			vertexShader: vertex,
+			fragmentShader: fragment,
+		})
 
-        this.instance.setClearColor(this.clearColor, 1)
-        this.instance.setSize(this.config.width, this.config.height)
-        this.instance.setPixelRatio(this.config.pixelRatio)
+		// Debug
+		if (this.debug) {
+			this.debugFolder
+				.add(
+					this.material.uniforms.progress,
+					'value'
+				)
+				.min(0)
+				.max(1)
+		}
 
-        this.instance.physicallyCorrectLights = true
-        // this.instance.gammaOutPut = true
-        this.instance.outputEncoding = THREE.sRGBEncoding
-        // this.instance.shadowMap.type = THREE.PCFSoftShadowMap
-        // this.instance.shadowMap.enabled = false
-        this.instance.toneMapping = THREE.NoToneMapping
-        this.instance.toneMappingExposure = 1
+		let quad = new THREE.Mesh(
+			new THREE.PlaneGeometry(1, 1),
+			this.material
+		)
 
-        this.context = this.instance.getContext()
+		this.postScene.add(quad)
+	}
 
-        // Add stats panel
-        if(this.stats)
-        {
-            this.stats.setRenderPanel(this.context)
-        }
-        
-        // Debug
-        if(this.debug)
-        {
-            this.debugFolder
-                .addColor(
-                    this,
-                    'clearColor'
-                )
-                .onChange(() =>
-                {
-                    this.instance.setClearColor(this.clearColor)
-                })
+	resize() {
+		// Instance
+		this.instance.setSize(this.config.width, this.config.height)
+		this.instance.setPixelRatio(this.config.pixelRatio)
 
-            this.debugFolder
-                .add(
-                    this.instance,
-                    'toneMapping',
-                    {
-                        'NoToneMapping': THREE.NoToneMapping,
-                        'LinearToneMapping': THREE.LinearToneMapping,
-                        'ReinhardToneMapping': THREE.ReinhardToneMapping,
-                        'CineonToneMapping': THREE.CineonToneMapping,
-                        'ACESFilmicToneMapping': THREE.ACESFilmicToneMapping
-                    }
-                )
-                .onChange(() =>
-                {
-                    this.scene.traverse((_child) =>
-                    {
-                        if(_child instanceof THREE.Mesh)
-                            _child.material.needsUpdate = true
-                    })
-                })
-                
-            this.debugFolder
-                .add(
-                    this.instance,
-                    'toneMappingExposure'
-                )
-                .min(0)
-                .max(10)
-        }
-    }
+		// Post process
+		this.postProcess.composer.setSize(this.config.width, this.config.height)
+		this.postProcess.composer.setPixelRatio(this.config.pixelRatio)
+	}
 
-    setPostProcess()
-    {
-        this.postProcess = {}
+	update() {
+		if (this.stats) {
+			this.stats.beforeRender()
+		}
 
-        /**
-         * Render pass
-         */
-        this.postProcess.renderPass = new RenderPass(this.scene, this.camera.instance)
+		if (!this.material) return
 
-        /**
-         * Effect composer
-         */
-        this.renderTarget = new THREE.WebGLRenderTarget(
-            this.config.width,
-            this.config.height,
-            {
-                generateMipmaps: false,
-                minFilter: THREE.LinearFilter,
-                magFilter: THREE.LinearFilter,
-                format: THREE.RGBFormat,
-                encoding: THREE.sRGBEncoding,
-                samples: 2
-            }
-        )
-        this.postProcess.composer = new EffectComposer(this.instance, this.renderTarget)
-        this.postProcess.composer.setSize(this.config.width, this.config.height)
-        this.postProcess.composer.setPixelRatio(this.config.pixelRatio)
+		this.instance.setRenderTarget(this.scenes[this.current].target)
+		this.instance.render(this.scenes[this.current].scene, this.camera)
+		this.next = (this.current + 1) % this.scenes.length
 
-        this.postProcess.composer.addPass(this.postProcess.renderPass)
-    }
+		this.instance.setRenderTarget(this.scenes[this.next].target)
+		this.instance.render(this.scenes[this.next].scene, this.camera)
 
-    resize()
-    {
-        // Instance
-        this.instance.setSize(this.config.width, this.config.height)
-        this.instance.setPixelRatio(this.config.pixelRatio)
+		this.instance.setRenderTarget(null)
 
-        // Post process
-        this.postProcess.composer.setSize(this.config.width, this.config.height)
-        this.postProcess.composer.setPixelRatio(this.config.pixelRatio)
-    }
+		this.material.uniforms.uTexture1.value = this.scenes[this.current].target.texture;
+		this.material.uniforms.uTexture2.value = this.scenes[this.next].target.texture;
 
-    update()
-    {
-        if(this.stats)
-        {
-            this.stats.beforeRender()
-        }
+		// update scenes
+		this.scenes.forEach((o, index) => {
+			o.scene.rotation.x = this.time.elapsed * 0.0005
+			o.scene.rotation.y = this.time.elapsed * 0.0005
+		})
 
-        if(this.usePostprocess)
-        {
-            this.postProcess.composer.render()
-        }
-        else
-        {
-            this.instance.render(this.scene, this.camera.instance)
-        }
+		this.instance.render(this.postScene, this.postCamera)
 
-        if(this.stats)
-        {
-            this.stats.afterRender()
-        }
-    }
 
-    destroy()
-    {
-        this.instance.renderLists.dispose()
-        this.instance.dispose()
-        this.renderTarget.dispose()
-        this.postProcess.composer.renderTarget1.dispose()
-        this.postProcess.composer.renderTarget2.dispose()
-    }
+		if (this.stats) {
+			this.stats.afterRender()
+		}
+	}
+
+	destroy() {
+		this.instance.renderLists.dispose()
+		this.instance.dispose()
+		this.renderTarget.dispose()
+		this.postProcess.composer.renderTarget1.dispose()
+		this.postProcess.composer.renderTarget2.dispose()
+	}
 }
